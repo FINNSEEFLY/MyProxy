@@ -17,6 +17,7 @@ namespace MyProxy
     public partial class Proxy : ServiceBase
     {
         private const string HOST = "127.0.0.1";
+        private const string PATH_TO_FILES = "D:\\MyProxyFiles\\";
         readonly private char[]  Separators = new char[] { '\r', '\n' };
         private const int PROXY_PORT = 8080;
         private const int RECIVE_BUFFER_SIZE = 15360;
@@ -36,8 +37,8 @@ namespace MyProxy
             requestListener = new TcpListener(IPAddress.Parse(HOST), PROXY_PORT);
             requestListener.Start();
             isWorking = true;
-            ListenRequests();
             AddInLog("MyProxy launched");
+            Task.Factory.StartNew(ListenRequests);
         }
 
         protected override void OnStop()
@@ -169,16 +170,14 @@ namespace MyProxy
 
         private void AddInLog(string str)
         {
-            if (!File.Exists("Logs.txt"))
+            if (!File.Exists(PATH_TO_FILES+"Logs.txt"))
             {
-                File.Create("Logs.txt").Dispose();
+                File.Create(PATH_TO_FILES+"Logs.txt").Dispose();
             }
             try
             {
-                var writer = new StreamWriter("Logs.txt");
                 string dateAndTime = "[" + DateTime.Now.ToString("dd.MM.yyyy|HH:mm:ss") + "] ";
-                writer.WriteLine(dateAndTime + str);
-                writer.Dispose();
+                File.AppendAllText(PATH_TO_FILES + "Logs.txt", dateAndTime + str+"\r\n");
             }
             catch (Exception e)
             {
@@ -188,16 +187,14 @@ namespace MyProxy
 
         private void AddInErrLog(string str)
         {
-            if (!File.Exists("ProxyLog.txt"))
+            if (!File.Exists(PATH_TO_FILES+"ProxyErrLog.txt"))
             {
-                File.Create("ProxyLog.txt").Dispose();
+                File.Create(PATH_TO_FILES+ "ProxyErrLog.txt").Dispose();
             }
             try
             {
-                var writer = new StreamWriter("ProxyLog.txt");
                 string dateAndTime = "[" + DateTime.Now.ToString("dd.MM.yyyy|HH:mm:ss") + "] ";
-                writer.WriteLine(dateAndTime + str);
-                writer.Dispose();
+                File.AppendAllText(PATH_TO_FILES + "ProxyErrLog.txt", dateAndTime + str+"\r\n");
             }
             catch { };
         }
@@ -205,11 +202,11 @@ namespace MyProxy
         private List<string> LoadBlackList()
         {
             List<string> blacklist = new List<string>();
-            if (File.Exists("blacklist.txt"))
+            if (File.Exists(PATH_TO_FILES+"blacklist.txt"))
             {
                 try
                 {
-                    var reader = new StreamReader("blacklist.txt");
+                    var reader = new StreamReader(PATH_TO_FILES+"blacklist.txt");
                     while (!reader.EndOfStream)
                     {
                         blacklist.Add(reader.ReadLine());
@@ -223,7 +220,7 @@ namespace MyProxy
             }
             else
             {
-                File.Create("blacklist.txt").Dispose();
+                File.Create(PATH_TO_FILES+"blacklist.txt").Dispose();
             }
             return blacklist;
         }
