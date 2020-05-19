@@ -17,6 +17,7 @@ namespace MyProxy
     public partial class Proxy : ServiceBase
     {
         private const string HOST = "127.0.0.1";
+        private const int PROXY_PORT = 8080;
         private const string PATH_TO_FILES = "D:\\MyProxyFiles\\";
         private const string FORBIDDEN_MESSAGE = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: 52\r\n\r\nThis website is blocked. Please accept our apologies";
         private const string DATE_AND_TIME_FORMAT = "dd.MM.yyyy|HH:mm:ss";
@@ -24,13 +25,12 @@ namespace MyProxy
         private const string FILENAME_PROXY_ERR_LOG = "ErrLog.txt";
         private const string FILENAME_BLACKLIST = "Blacklist.txt";
         readonly private char[] Separators = new char[] { '\r', '\n' };
-        private const int PROXY_PORT = 8080;
         private const int RECIVE_BUFFER_SIZE = 15360;
         private const int DEFAULT_SERVER_PORT = 80;
         private const int FORBIDDEN = 403;
         private bool isWorking;
-        private List<string> BlackList;
-        private TcpListener requestListener;
+        readonly private List<string> BlackList;
+        readonly private TcpListener requestListener;
 
         public Proxy()
         {
@@ -115,12 +115,10 @@ namespace MyProxy
         {
             buffer = FixGET(buffer);
             string[] httpRequest = ParseHTTP(buffer);
-            string hostRecord = httpRequest.FirstOrDefault((substr) => substr.Contains("Host"));
-            hostRecord = hostRecord.Substring(hostRecord.IndexOf(':') + 2);
+            string fullHostRecord = httpRequest.FirstOrDefault((substr) => substr.Contains("Host"));
+            string hostRecord = fullHostRecord.Substring(fullHostRecord.IndexOf(':') + 2);
             try
             {
-                var tcpClient = GetTCPClient(hostRecord);
-                var serverStream = tcpClient.GetStream();
                 if (IsForbidden(hostRecord))
                 {
                     ThrowForbidden(browserstream);
@@ -128,6 +126,8 @@ namespace MyProxy
                 }
                 else
                 {
+                    var tcpClient = GetTCPClient(hostRecord);
+                    var serverStream = tcpClient.GetStream();
                     serverStream.Write(buffer, 0, buffer.Length);
 
                     var responseBytes = new byte[32];
@@ -137,9 +137,9 @@ namespace MyProxy
                     var responseCode = GetResponseCode(responseBytes);
                     AddInLog(hostRecord + ' ' + responseCode);
                     serverStream.CopyTo(browserstream);
+                    serverStream.Dispose();
+                    tcpClient.Dispose();
                 }
-                serverStream.Dispose();
-                tcpClient.Dispose();
             }
             catch (Exception e)
             {
@@ -150,7 +150,7 @@ namespace MyProxy
         // Извлекает из ответа от сервера код ответа
         private string GetResponseCode(byte[] response)
         {
-            string[] head = Encoding.UTF8.GetString(response).Split(Separators);
+            string[] head = Encoding.ASCII.GetString(response).Split(Separators);
             return head[0].Substring(head[0].IndexOf(" ") + 1);
         }
 
@@ -176,15 +176,8 @@ namespace MyProxy
         // Получает TCPClient из Host
         private TcpClient GetTCPClient(string hostrecord)
         {
-            string[] domainAndPort = hostrecord.Trim().Split(new char[] { ':' });
-            if (domainAndPort.Length == 2)
-            {
-                return new TcpClient(domainAndPort[0], int.Parse(domainAndPort[1]));
-            }
-            else
-            {
-                return new TcpClient(domainAndPort[0], DEFAULT_SERVER_PORT);
-            }
+            string[] hostNameAndPort = hostrecord.Trim().Split(new char[] { ':' });
+            return new TcpClient(hostNameAndPort[0], (hostNameAndPort.Length == 2) ? int.Parse(hostNameAndPort[1]) : DEFAULT_SERVER_PORT);
         }
 
         // Разбивает ответ от сервера на строки

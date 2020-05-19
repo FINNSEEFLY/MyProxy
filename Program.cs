@@ -14,12 +14,7 @@ namespace MyProxy
         /// </summary>
         static void Main()
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
-            {
-                new Proxy()
-            };
-            ServiceBase.Run(ServicesToRun);
+            ServiceBase.Run(new Proxy());
         }
     }
 }
