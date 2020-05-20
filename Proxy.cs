@@ -188,8 +188,7 @@ namespace MyProxy
         {
             var strBuffer = Encoding.ASCII.GetString(buffer);
             var regexp = new Regex("http:\\/\\/[\\wа-яё\\:\\.]+");
-            buffer = Encoding.ASCII.GetBytes(strBuffer.Replace(regexp.Match(strBuffer).Value, ""));
-            return buffer;
+            return Encoding.ASCII.GetBytes(strBuffer.Replace(regexp.Match(strBuffer).Value, ""));            
         }
 
         // Добавление записи в основной лог
