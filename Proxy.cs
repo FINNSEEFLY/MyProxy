@@ -47,6 +47,7 @@ namespace MyProxy
         protected override void OnStop()
         {
             isWorking = false;
+            requestListener.Stop();
             AddInLog("MyProxy is stopped");
         }
 
@@ -74,14 +75,16 @@ namespace MyProxy
         {
             while (isWorking)
             {
-                if (requestListener.Pending())
+                try
                 {
-                    if (isWorking)
-                    {
-                        var socket = requestListener.AcceptSocket();
-                        Task.Factory.StartNew(() => ReceiveData(socket));
-                    }
+                    var socket = requestListener.AcceptSocket();
+                    Task.Factory.StartNew(() => ReceiveData(socket));
                 }
+                catch(Exception e)
+                {
+                    AddInErrLog(e.Message);
+                }
+
             }
             requestListener.Stop();
         }
@@ -188,7 +191,7 @@ namespace MyProxy
         {
             var strBuffer = Encoding.ASCII.GetString(buffer);
             var regexp = new Regex("http:\\/\\/[\\wа-яё\\:\\.]+");
-            return Encoding.ASCII.GetBytes(strBuffer.Replace(regexp.Match(strBuffer).Value, ""));            
+            return Encoding.ASCII.GetBytes(strBuffer.Replace(regexp.Match(strBuffer).Value, ""));
         }
 
         // Добавление записи в основной лог
